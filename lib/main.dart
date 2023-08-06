@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'permanentNotification.dart';
+import 'package:latify/alarmPage.dart';
+
+import 'package:latify/marshallingData.dart' as marshallingData;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +30,67 @@ void main() async {
   await notification.showNotification();
 
   runApp(const MyApp());
+
+  const notificationListener = MethodChannel('com.github.GeekCampVol7team38.latify/notificationListener');
+
+  notificationListener.setMethodCallHandler((MethodCall methodCall) async {
+    if (methodCall.method == 'posted') {
+      Map<String, dynamic> data = methodCall.arguments;
+      marshallingData.Notification notification = marshallingData.Notification();
+      notification.audioStreamType = data['notification.audioStreamType'];
+      notification.category = data['notification.category'];
+      notification.color = data['notification.color'];
+      notification.defaults = data['notification.defaults'];
+      notification.flags= data['notification.flags'];
+      notification.icon = data['notification.icon'];
+      notification.iconLevel = data['notification.iconLevel'];
+      notification.ledARGB = data['notification.ledARGB'];
+      notification.ledOffMS = data['notification.ledOffMS'];
+      notification.ledOnMS = data['notification.ledOnMS'];
+      notification.number = data['notification.number'];
+      notification.priority = data['notification.priority'];
+      notification.tickerText = marshallingData.CharSequence().value = data['notification.tickerText'];
+      notification.vibrate = data['notification.vibrate'];
+      notification.visibility = data['notification.visibility'];
+      notification.when = data['notification.when'];
+      notification.describeContents = data['notification.describeContents'];
+      notification.getAllowSystemGeneratedContextualActions = data['notification.getAllowSystemGeneratedContextualActions'];
+      notification.getBadgeIconType = data['notification.getBadgeIconType'];
+      notification.getChannelId = data['notification.getChannelId'];
+      notification.getGroup = data['notification.getGroup'];
+      notification.getGroupAlertBehavior = data['notification.getGroupAlertBehavior'];
+      notification.getSettingsText = marshallingData.CharSequence().value = data['notification.getSettingsText'];
+      notification.getShortcutId = data['notification.getShortcutId'];
+      notification.getSortKey = data['notification.getSortKey'];
+      notification.getTimeoutAfter = data['notification.getTimeoutAfter'];
+      notification.hasImage = data['notification.hasImage'];
+      notification.notificationToString = data['notification.notificationToString'];
+
+      marshallingData.UserHandle userHandle = marshallingData.UserHandle();
+      userHandle.describeContents = data['userHandle.describeContents'];
+      userHandle.userHandleHashCode = data['userHandle.hashCode'];
+      userHandle.userHandleToString = data['userHandle.toString'];
+
+      marshallingData.StatusBarNotification statusBarNotification = marshallingData.StatusBarNotification();
+      statusBarNotification.describeContents = data['describeContents'];
+      statusBarNotification.getGroupKey = data['getGroupKey'];
+      statusBarNotification.getId = data['getId'];
+      statusBarNotification.getKey = data['getKey'];
+      statusBarNotification.getNotification = notification;
+      statusBarNotification.getOpPkg = data['getOpPkg'];
+      statusBarNotification.getOverrideGroupKey = data['getOverrideGroupKey'];
+      statusBarNotification.getPackageName = data['getPackageName'];
+      statusBarNotification.getPostTime = data['getPostTime'];
+      statusBarNotification.getTag = data['getTag'];
+      statusBarNotification.getUid = data['getUid'];
+      statusBarNotification.getUserId = data['getUserId'];
+      statusBarNotification.isAppGroup = data['isAppGroup'];
+      statusBarNotification.isClearable = data['isClearable'];
+      statusBarNotification.isGroup = data['isGroup'];
+      statusBarNotification.isOngoing = data['isOngoing'];
+      statusBarNotification.statusBarNotificationToString = data['toString'];
+    }
+  });
 }
 
 
@@ -114,6 +178,12 @@ class _MyHomePageState extends State<MyHomePage> {
       _counter++;
     });
   }
+  void _navigateToAlarmPage() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => AlarmPage())
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +222,10 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            ElevatedButton(
+                onPressed: _navigateToAlarmPage,
+                child: const Text('Go to Alarm Page'),
+            ),
             const Text(
               'You have pushed the button this many times:',
             ),
