@@ -10,16 +10,25 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import java.io.File
+import java.util.UUID
+import org.msgpack.core.MessagePack
+import org.msgpack.core.MessageBufferPacker
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MyNotificationListenerService : NotificationListenerService() {
-    // private val CHANNEL = "com.github.GeekCampVol7team38.latify/notificationListener"
     private val CHANNEL_ID = "MyChannel"
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
+
+        val packageName = sbn?.packageName?.toString() ?: ""
+
+        if (packageName == "com.github.GikuCampVol7team38.latify") {
+            return
+        }
 
         val map = hashMapOf<String, Any?>(
             // int: Describe the kinds of special objects contained in this Parcelable instance's marshaled representation.
@@ -158,10 +167,54 @@ class MyNotificationListenerService : NotificationListenerService() {
             "toString" to sbn?.toString(),
         )
 
-        // MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).invokeMethod("posted", map)
+        val packer: MessageBufferPacker = MessagePack.newDefaultBufferPacker()
 
+        packer.packMapHeader(map.size)
 
-        val packageName = sbn?.packageName?.toString() ?: ""
+        for ((key, value) in map) {
+            packer.packString(key)
+            when (value) {
+                null -> packer.packNil()
+                is Boolean -> packer.packBoolean(value)
+                is Byte -> packer.packByte(value)
+                is Short -> packer.packShort(value)
+                is Int -> packer.packInt(value)
+                is Long -> packer.packLong(value)
+                is Float -> packer.packFloat(value)
+                is Double -> packer.packDouble(value)
+                is String -> packer.packString(value)
+                is ByteArray -> packer.packBinaryHeader(value.size).writePayload(value)
+                is List<*> -> {
+                    packer.packArrayHeader(value.size)
+                    for (item in value) {
+                        when (item) {
+                            null -> packer.packNil()
+                            is Boolean -> packer.packBoolean(item)
+                            is Byte -> packer.packByte(item)
+                            is Short -> packer.packShort(item)
+                            is Int -> packer.packInt(item)
+                            is Long -> packer.packLong(item)
+                            is Float -> packer.packFloat(item)
+                            is Double -> packer.packDouble(item)
+                            is String -> packer.packString(item)
+                            is ByteArray -> packer.packBinaryHeader(item.size).writePayload(item)
+                            else -> throw Exception("Unsupported type: ${item::class.java}")
+                        }
+                    }
+                }
+                else -> throw Exception("Unsupported type: ${value::class.java}")
+            }
+        }
+
+        val rawNotificationFolder = File(this.filesDir, "raw")
+
+        if (!rawNotificationFolder.exists()) {
+            rawNotificationFolder.mkdir()
+        }
+
+        val file = File(rawNotificationFolder, UUID.randomUUID().toString())
+        file.writeBytes(packer.toByteArray())
+
         val notification = sbn?.notification
 
         sendMyNotification(packageName, notification)
@@ -169,10 +222,6 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private fun sendMyNotification(packageName: String, notification: Notification?) {
         if (notification == null) {
-            return
-        }
-
-        if (packageName == "com.github.GikuCampVol7team38.latify") {
             return
         }
 
@@ -189,15 +238,24 @@ class MyNotificationListenerService : NotificationListenerService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val actionIntent = Intent(this, NotificationReceiver::class.java)
-        val actionPendingIntent = PendingIntent.getBroadcast(this, 0, actionIntent, PendingIntent.FLAG_IMMUTABLE)
+        val delayBy5minutesIntent = Intent(this, DelayBy5MinutesReciever::class.java)
+        val delayBy5minutesPendingIntent = PendingIntent.getBroadcast(this, 0, delayBy5minutesIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        val delayBy10minutesIntent = Intent(this, DelayBy10MinutesReciever::class.java)
+        val delayBy10minutesPendingIntent = PendingIntent.getBroadcast(this, 0, delayBy10minutesIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        val delayBy60minutesIntent = Intent(this, DelayBy60MinutesReciever::class.java)
+        val delayBy60minutesPendingIntent = PendingIntent.getBroadcast(this, 0, delayBy60minutesIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("New notification from $packageName")
             .setContentText(notification.tickerText)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .addAction(R.mipmap.ic_launcher, "Button Name", actionPendingIntent)
-        
+            .addAction(R.mipmap.ic_launcher, "Delay by 5 minutes", delayBy5minutesPendingIntent)
+            .addAction(R.mipmap.ic_launcher, "Delay by 10 minutes", delayBy10minutesPendingIntent)
+            .addAction(R.mipmap.ic_launcher, "Delay by an hour", delayBy60minutesPendingIntent)
+            .setOngoing(true)
+
         notificationManager.notify(1, builder.build())
     }
 

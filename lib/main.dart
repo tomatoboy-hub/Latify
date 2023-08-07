@@ -3,10 +3,11 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'permanentNotification.dart';
-import 'package:latify/alarmPage.dart';
+import 'package:intl/intl.dart';
 
-import 'package:latify/marshallingData.dart' as marshallingData;
+import 'alarmList.dart';
+import 'notionPage.dart';
+import 'permanentNotification.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,69 +31,7 @@ void main() async {
   await notification.showNotification();
 
   runApp(const MyApp());
-
-  const notificationListener = MethodChannel('com.github.GeekCampVol7team38.latify/notificationListener');
-
-  notificationListener.setMethodCallHandler((MethodCall methodCall) async {
-    if (methodCall.method == 'posted') {
-      Map<String, dynamic> data = methodCall.arguments;
-      marshallingData.Notification notification = marshallingData.Notification();
-      notification.audioStreamType = data['notification.audioStreamType'];
-      notification.category = data['notification.category'];
-      notification.color = data['notification.color'];
-      notification.defaults = data['notification.defaults'];
-      notification.flags= data['notification.flags'];
-      notification.icon = data['notification.icon'];
-      notification.iconLevel = data['notification.iconLevel'];
-      notification.ledARGB = data['notification.ledARGB'];
-      notification.ledOffMS = data['notification.ledOffMS'];
-      notification.ledOnMS = data['notification.ledOnMS'];
-      notification.number = data['notification.number'];
-      notification.priority = data['notification.priority'];
-      notification.tickerText = marshallingData.CharSequence().value = data['notification.tickerText'];
-      notification.vibrate = data['notification.vibrate'];
-      notification.visibility = data['notification.visibility'];
-      notification.when = data['notification.when'];
-      notification.describeContents = data['notification.describeContents'];
-      notification.getAllowSystemGeneratedContextualActions = data['notification.getAllowSystemGeneratedContextualActions'];
-      notification.getBadgeIconType = data['notification.getBadgeIconType'];
-      notification.getChannelId = data['notification.getChannelId'];
-      notification.getGroup = data['notification.getGroup'];
-      notification.getGroupAlertBehavior = data['notification.getGroupAlertBehavior'];
-      notification.getSettingsText = marshallingData.CharSequence().value = data['notification.getSettingsText'];
-      notification.getShortcutId = data['notification.getShortcutId'];
-      notification.getSortKey = data['notification.getSortKey'];
-      notification.getTimeoutAfter = data['notification.getTimeoutAfter'];
-      notification.hasImage = data['notification.hasImage'];
-      notification.notificationToString = data['notification.notificationToString'];
-
-      marshallingData.UserHandle userHandle = marshallingData.UserHandle();
-      userHandle.describeContents = data['userHandle.describeContents'];
-      userHandle.userHandleHashCode = data['userHandle.hashCode'];
-      userHandle.userHandleToString = data['userHandle.toString'];
-
-      marshallingData.StatusBarNotification statusBarNotification = marshallingData.StatusBarNotification();
-      statusBarNotification.describeContents = data['describeContents'];
-      statusBarNotification.getGroupKey = data['getGroupKey'];
-      statusBarNotification.getId = data['getId'];
-      statusBarNotification.getKey = data['getKey'];
-      statusBarNotification.getNotification = notification;
-      statusBarNotification.getOpPkg = data['getOpPkg'];
-      statusBarNotification.getOverrideGroupKey = data['getOverrideGroupKey'];
-      statusBarNotification.getPackageName = data['getPackageName'];
-      statusBarNotification.getPostTime = data['getPostTime'];
-      statusBarNotification.getTag = data['getTag'];
-      statusBarNotification.getUid = data['getUid'];
-      statusBarNotification.getUserId = data['getUserId'];
-      statusBarNotification.isAppGroup = data['isAppGroup'];
-      statusBarNotification.isClearable = data['isClearable'];
-      statusBarNotification.isGroup = data['isGroup'];
-      statusBarNotification.isOngoing = data['isOngoing'];
-      statusBarNotification.statusBarNotificationToString = data['toString'];
-    }
-  });
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -101,7 +40,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Latify',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -118,10 +57,10 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Alarm List'),
     );
   }
 }
@@ -145,7 +84,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   final MethodChannel _notificationAccessChannel = const MethodChannel('com.github.GeekCampVol7team38.latify/notification_access');
 
   Future<void> _checkPermission() async {
@@ -168,79 +106,161 @@ class _MyHomePageState extends State<MyHomePage> {
     _checkPermission();
   }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-  void _navigateToAlarmPage() {
+  void _navigateToNotionPage(){
     Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => AlarmPage())
+        MaterialPageRoute(builder: (context) => NotionPage())
     );
+  }
+
+  AlarmList alarmList = AlarmList();
+  bool isEditing = false;
+  TextEditingController editingController = TextEditingController();
+  DateTime selectedDateTime = DateTime.now();
+  int editingIndex = -1;
+
+  @override
+  void dispose() {
+    editingController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Expanded(
+              child: ListView.builder(
+                itemCount: alarmList.alarmTextList.length,
+                itemBuilder: (context, index) {
+                  final isCurrentlyEditing = isEditing && editingIndex == index;
+
+                  return Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('アラーム日時'),
+                          isCurrentlyEditing
+                              ? TextFormField(
+                            controller: editingController,
+                            onEditingComplete: () {
+                              _saveEdit(index);
+                            },
+                          )
+                              : Text(
+                            DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTime),
+                          ),
+                          const Text(''),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(alarmList.alarmTextList[index]),
+                          Text(alarmList.subAlarmTextList[index]),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              _startEditing(index);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () {
+                              _deleteItem(index);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.calendar_today),
+                            onPressed: () {
+                              _selectDateTime(index);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
             ElevatedButton(
-                onPressed: _navigateToAlarmPage,
-                child: const Text('Go to Alarm Page'),
-            ),
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              onPressed: _navigateToNotionPage,
+              child: const Text('Go to Notion Page'),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  void _startEditing(int index) {
+    setState(() {
+      isEditing = true;
+      editingIndex = index;
+      editingController.text = alarmList.alarmTimeList[index];
+    });
+  }
+
+  Future<void> _selectDateTime(int index) async {
+    final DateTime? pickedDateTime = await showDatePicker(
+      context: context,
+      initialDate: selectedDateTime,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (!mounted) return;
+
+    if (pickedDateTime != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(selectedDateTime),
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          selectedDateTime = DateTime(
+            pickedDateTime.year,
+            pickedDateTime.month,
+            pickedDateTime.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+          alarmList.alarmTimeList[index] =
+              DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTime);
+        });
+      }
+    }
+  }
+
+  void _saveEdit(int index) {
+    setState(() {
+      isEditing = false;
+      editingIndex = -1;
+      alarmList.alarmTimeList[index] = editingController.text;
+      editingController.text = '';
+    });
+  }
+
+  void _deleteItem(int index) {
+    setState(() {
+      // 削除ボタンが押されたアイテムをリストから削除
+      alarmList.alarmTextList.removeAt(index);
+    });
   }
 }
